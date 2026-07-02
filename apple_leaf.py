@@ -15,7 +15,8 @@ class AppleLeaf(data.Dataset):
         self.root = root
         self.transform = trans
 
-        self.classes = sorted(os.listdir(root))
+        self.classes = sorted(d for d in os.listdir(root)
+                              if os.path.isdir(os.path.join(root, d)))
         self.class_to_idx = {cls_name: i for i, cls_name in enumerate(self.classes)}
 
         self.samples = []
@@ -94,24 +95,26 @@ while True:
 
 MODEL_NAME= 'custom' if MODEL_TYPE == 1 else 'resnet'
 
+device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+load_path = f'Apple_Leaf/model_{MODEL_NAME}.pth'
+model_loaded = os.path.exists(load_path)
+
 if MODEL_TYPE == 1:
     model = Net()
-elif MODEL_TYPE == 2:
-    model = models.resnet18(weights='IMAGENET1K_V1')
+else:
+    # ImageNet-веса нужны только для обучения с нуля; если есть свои — не качаем
+    weights = None if model_loaded else 'IMAGENET1K_V1'
+    model = models.resnet18(weights=weights)
     for param in model.parameters():
         param.requires_grad = False
-    model.fc = nn.Linear(model.fc.in_features, 4)
+    model.fc = nn.Linear(model.fc.in_features, len(train_dataset.classes))
 
-model_loaded=False
-load_path = f'Apple_Leaf/model_{MODEL_NAME}.pth'
-if os.path.exists(load_path):
-    model.load_state_dict(torch.load(load_path))
-    model_loaded=True
+if model_loaded:
+    model.load_state_dict(torch.load(load_path, map_location=device))
     print(f'Загружены веса: {load_path}')
 
 
 criterion = nn.CrossEntropyLoss()
-device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
 model = model.to(device)
 if not model_loaded:
     opt = optim.Adam(model.parameters(), lr=0.001)
@@ -153,7 +156,6 @@ if not model_loaded:
         print(
             f'Epoch {epoch + 1}/{epochs} - Train_loss: {avg_loss:.4f} - Avg_val_loss: {avg_val_loss:.4f} - Avg_val_acc: {val_acc:.2f}%')
 
-        model.train()
 
     os.makedirs('Apple_Leaf', exist_ok=True)
     torch.save(model.state_dict(), f'Apple_Leaf/model_{MODEL_NAME}.pth')
@@ -163,6 +165,8 @@ model.eval()
 correct = 0
 total = 0
 test_loss = 0
+all_preds = []
+all_labels = []
 
 with torch.no_grad():
     for x_batch, y_batch in test_loader:
@@ -171,24 +175,16 @@ with torch.no_grad():
         loss = criterion(prediction, y_batch)
 
         test_loss += loss.item()
+        preds = prediction.argmax(1)
         total += y_batch.size(0)
-        correct += (prediction.argmax(1) == y_batch).sum().item()
+        correct += (preds == y_batch).sum().item()
+
+        all_preds.extend(preds.cpu().numpy())
+        all_labels.extend(y_batch.cpu().numpy())
 
 avg_test_loss = test_loss / len(test_loader)
 test_acc = (correct / total) * 100
 print(f'Test Loss: {avg_test_loss:.4f}, Test Accuracy: {test_acc:.2f}%')
-
-model.eval()
-all_preds = []
-all_labels = []
-
-with torch.no_grad():
-    for x_batch, y_batch in test_loader:
-        x_batch, y_batch = x_batch.to(device), y_batch.to(device)
-        prediction = model(x_batch)
-        preds = prediction.argmax(1)
-        all_preds.extend(preds.cpu().numpy())
-        all_labels.extend(y_batch.cpu().numpy())
 
 print(classification_report(all_labels, all_preds, target_names=train_dataset.classes))
 print(confusion_matrix(all_labels, all_preds))
