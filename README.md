@@ -136,11 +136,17 @@ curl -F "file=@leaf.jpg" http://localhost:8000/predict
 
 ## 🛠 Технологии
 
+**Обучение**
 - Python 3
 - PyTorch / torchvision
 - scikit-learn (метрики: classification report, confusion matrix)
 - tqdm (прогресс-бар обучения)
 - Pillow (обработка изображений)
+
+**Инференс-сервис**
+- FastAPI + Uvicorn (REST API)
+- Gradio (веб-интерфейс)
+- NumPy (Grad-CAM / визуализация зон внимания)
 
 ## 📁 Структура проекта
 
