@@ -1,9 +1,3 @@
-"""Инференс-обёртка над обученными моделями Apple Leaf Disease.
-
-Не зависит от тренировочного скрипта и датасета: классы и препроцессинг
-захардкожены так же, как при обучении (sorted-порядок имён папок,
-Resize(224) + ImageNet-нормализация).
-"""
 import io
 import os
 
@@ -14,7 +8,6 @@ import torchvision.transforms as transforms
 from PIL import Image
 from torchvision import models
 
-# Порядок КРИТИЧЕН: должен совпадать с sorted(os.listdir(train)) при обучении.
 CLASSES = [
     "Apple___Apple_scab",
     "Apple___Black_rot",
@@ -22,7 +15,6 @@ CLASSES = [
     "Apple___healthy",
 ]
 
-# Человекочитаемые подписи для UI.
 LABELS_RU = {
     "Apple___Apple_scab": "Парша яблони",
     "Apple___Black_rot": "Чёрная гниль",
@@ -41,11 +33,10 @@ transform = transforms.Compose([
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available()
                       else "mps" if torch.backends.mps.is_available()
-                      else "cpu")
+else "cpu")
 
 
 class Net(nn.Module):
-    """Custom CNN — 1:1 копия архитектуры из apple_leaf.py."""
 
     def __init__(self, num_classes=len(CLASSES)):
         super().__init__()
@@ -75,7 +66,6 @@ class Net(nn.Module):
 
 
 def build_model(model_name):
-    """Создаёт архитектуру без весов."""
     if model_name == "custom":
         return Net()
     if model_name == "resnet":
@@ -86,14 +76,12 @@ def build_model(model_name):
 
 
 def gradcam_layer(model, model_name):
-    """Последний свёрточный слой — цель для Grad-CAM."""
     if model_name == "custom":
-        return model.features[12]      # Conv2d(256, 512) → карта 14x14
-    return model.layer4[-1]            # последний BasicBlock ResNet18
+        return model.features[12]  # Conv2d(256, 512) → карта 14x14
+    return model.layer4[-1]  # последний BasicBlock ResNet18
 
 
 def load_model(model_name=None, weights_dir="Apple_Leaf"):
-    """Загружает модель с обученными весами и переводит в eval."""
     model_name = model_name or os.environ.get("MODEL_NAME", "resnet")
     path = os.path.join(weights_dir, f"model_{model_name}.pth")
     if not os.path.exists(path):
@@ -110,7 +98,6 @@ def load_model(model_name=None, weights_dir="Apple_Leaf"):
 
 
 def _to_pil(image):
-    """Принимает PIL.Image, путь, bytes или numpy-массив → PIL RGB."""
     if isinstance(image, Image.Image):
         return image.convert("RGB")
     if isinstance(image, (bytes, bytearray)):
@@ -124,7 +111,6 @@ def _to_pil(image):
 
 @torch.no_grad()
 def predict(model, image):
-    """Возвращает dict {имя_класса: вероятность} по всем классам."""
     pil = _to_pil(image)
     x = transform(pil).unsqueeze(0).to(DEVICE)
     probs = torch.softmax(model(x), dim=1)[0].cpu().numpy()
@@ -132,7 +118,6 @@ def predict(model, image):
 
 
 def _jet(x):
-    """Приближение matplotlib-colormap 'jet' на numpy. x: массив в [0, 1] → RGB [0, 1]."""
     r = np.clip(1.5 - np.abs(4 * x - 3), 0, 1)
     g = np.clip(1.5 - np.abs(4 * x - 2), 0, 1)
     b = np.clip(1.5 - np.abs(4 * x - 1), 0, 1)
@@ -140,11 +125,6 @@ def _jet(x):
 
 
 def gradcam(model, image, target_class=None, alpha=0.5):
-    """Grad-CAM: возвращает (PIL-оверлей теплокарты, имя_класса).
-
-    Работает и для замороженного ResNet: включаем grad на входе, чтобы
-    autograd построил граф до свёрточных активаций.
-    """
     model_name = getattr(model, "_model_name", "resnet")
     layer = gradcam_layer(model, model_name)
 
@@ -169,9 +149,9 @@ def gradcam(model, image, target_class=None, alpha=0.5):
         model.zero_grad(set_to_none=True)
         logits[0, target_class].backward()
 
-        acts = activations["value"][0]           # (C, h, w)
-        grads = gradients["value"][0]            # (C, h, w)
-        weights = grads.mean(dim=(1, 2))         # усреднение градиентов по пространству
+        acts = activations["value"][0]  # (C, h, w)
+        grads = gradients["value"][0]  # (C, h, w)
+        weights = grads.mean(dim=(1, 2))  # усреднение градиентов по пространству
         cam = torch.relu((weights[:, None, None] * acts).sum(0))
     finally:
         h1.remove()

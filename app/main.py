@@ -1,8 +1,3 @@
-"""FastAPI-сервис инференса.
-
-Запуск:  uvicorn app.main:app --reload
-Docs:    http://localhost:8000/docs
-"""
 from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from app.model import CLASSES, LABELS_RU, load_model, predict
@@ -28,7 +23,7 @@ async def predict_endpoint(file: UploadFile = File(...)):
     data = await file.read()
     try:
         probs = predict(model, data)
-    except Exception as e:  # noqa: BLE001 — вернём читаемую ошибку клиенту
+    except Exception as e:
         raise HTTPException(status_code=422, detail=f"Не удалось обработать изображение: {e}")
 
     top = max(probs, key=probs.get)

@@ -1,8 +1,3 @@
-"""Веб-интерфейс на Gradio: загрузил фото листа → диагноз + Grad-CAM.
-
-Запуск:  python -m app.gradio_app
-Откроется на http://localhost:7860
-"""
 import gradio as gr
 
 from app.model import LABELS_RU, gradcam, load_model, predict
@@ -14,7 +9,6 @@ def analyze(image):
     if image is None:
         return {}, None
     probs = predict(model, image)
-    # Для gr.Label — {человекочитаемая подпись: вероятность}
     labeled = {LABELS_RU.get(cls, cls): p for cls, p in probs.items()}
     overlay, _ = gradcam(model, image)
     return labeled, overlay
@@ -36,7 +30,6 @@ with gr.Blocks(title="Apple Leaf Disease") as demo:
 
     btn.click(analyze, inputs=inp, outputs=[out_label, out_cam])
     inp.upload(analyze, inputs=inp, outputs=[out_label, out_cam])
-
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860)
