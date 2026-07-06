@@ -163,7 +163,7 @@ def gradcam(model, image, target_class=None, alpha=0.5):
         cam /= cam.max()
 
     cam_img = Image.fromarray(np.uint8(cam * 255)).resize(pil.size, Image.BILINEAR)
-    heat = _jet(np.asarray(cam_img) / 255.0)  # HxWx3 в [0, 1]
+    heat = _jet(np.asarray(cam_img) / 255.0)
     heat = Image.fromarray(np.uint8(heat * 255))
     overlay = Image.blend(pil, heat, alpha=alpha)
     return overlay, CLASSES[target_class]

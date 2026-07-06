@@ -95,44 +95,16 @@ python apple_leaf.py
 
 ## 🌐 Инференс-сервис (деплой)
 
-Обученную модель можно запустить как готовый сервис — с веб-интерфейсом и REST API. Инференс-код (`app/`) не зависит от датасета и тренировочного скрипта: нужны только веса в `Apple_Leaf/`.
+Обученную модель можно запустить как готовый веб-сервис. Инференс-код (`app/`) не зависит от датасета и тренировочного скрипта: нужны только веса в `Apple_Leaf/`.
 
 ```bash
 pip install -r requirements-app.txt
-```
-
-По умолчанию используется ResNet18. Сменить модель — переменной окружения `MODEL_NAME=custom`.
-
-### Веб-интерфейс (Gradio)
-
-```bash
 python -m app.gradio_app
 ```
 
 Откроется на http://localhost:7860 — загружаешь фото листа и получаешь диагноз + **Grad-CAM** (визуализацию зон, на которые «смотрит» сеть).
 
-### REST API (FastAPI)
-
-```bash
-uvicorn app.main:app --reload
-```
-
-- `GET  /health` — статус и список классов
-- `POST /predict` — приём изображения, ответ с вероятностями по всем классам
-- Интерактивная документация: http://localhost:8000/docs
-
-```bash
-curl -F "file=@leaf.jpg" http://localhost:8000/predict
-```
-
-```json
-{
-  "prediction": "Apple___Cedar_apple_rust",
-  "label_ru": "Ржавчина",
-  "confidence": 0.9958,
-  "probabilities": { "...": "..." }
-}
-```
+По умолчанию используется ResNet18. Сменить модель — переменной окружения `MODEL_NAME=custom`.
 
 ## 🛠 Технологии
 
@@ -144,7 +116,6 @@ curl -F "file=@leaf.jpg" http://localhost:8000/predict
 - Pillow (обработка изображений)
 
 **Инференс-сервис**
-- FastAPI + Uvicorn (REST API)
 - Gradio (веб-интерфейс)
 - NumPy (Grad-CAM / визуализация зон внимания)
 
@@ -155,8 +126,7 @@ curl -F "file=@leaf.jpg" http://localhost:8000/predict
 ├── apple_leaf.py           # обучение: датасет, модели, тренировка, тест
 ├── app/                    # инференс-сервис
 │   ├── model.py            # архитектуры, загрузка весов, препроцессинг, Grad-CAM
-│   ├── gradio_app.py       # веб-интерфейс
-│   └── main.py             # FastAPI (REST API)
+│   └── gradio_app.py       # веб-интерфейс
 ├── Apple_Disease_Dataset/  # датасет (не в репозитории, см. .gitignore)
 ├── Apple_Leaf/             # сохранённые веса моделей (не в репозитории)
 ├── requirements.txt        # зависимости для обучения
